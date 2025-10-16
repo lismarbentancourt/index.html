@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Coffee Shop Mini Simulation</title>
+<style>
+  :root{--bg:#0f172a;--card:#111827;--muted:#1f2937;--text:#e5e7eb;--accent:#22c55e;--warn:#f59e0b;--bad:#ef4444}
+  *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
+  body{margin:0;background:linear-gradient(180deg,#0b1220,#0f172a);color:var(--text)}
+  header{padding:1rem 1.25rem;border-bottom:1px solid #222}
+  h1{font-size:1.25rem;margin:0}
+  .wrap{max-width:1100px;margin:0 auto;padding:1rem}
+  .grid{display:grid;gap:1rem;grid-template-columns:1fr;}
+  @media(min-width:1000px){.grid{grid-template-columns:360px 1fr}}
+  .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;overflow:hidden}
+  .card h2{font-size:1rem;padding:0.9rem 1rem;margin:0;border-bottom:1px solid #1f2937;color:#cbd5e1}
+  .card .body{padding:1rem}
+  label{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin:.55rem 0;padding:.35rem .5rem;background:#0b1220;border:1px solid #1f2937;border-radius:10px}
+  label span{font-size:.9rem;color:#cbd5e1}
+  input[type=number], input[type=range], select{width:160px;background:#0b1220;color:#f3f4f6;border:1px solid #2a3444;padding:.45rem .55rem;border-radius:8px}
+  input[type=number]{width:120px}
+  input[type=range]{width:160px}
+  button{cursor:pointer;background:var(--accent);color:#04110a;border:0;border-radius:12px;padding:.7rem 1rem;font-weight:700}
+  button.alt{background:#334155;color:#e5e7eb}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+  .kpi{background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:.8rem}
+  .kpi h3{font-size:.8rem;margin:0 0 .35rem;color:#93c5fd}
+  .kpi .v{font-size:1.1rem;font-weight:700}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid #1f2937;padding:.55rem;text-align:right}
+  th{color:#9ca3af;font-weight:600}
+  td:first-child,th:first-child{text-align:left}
+  .row{display:flex;gap:.5rem;flex-wrap:wrap}
+  .badge{display:inline-block;padding:.25rem .5rem;border-radius:999px;background:#0b1220;border:1px solid #1f2937;color:#cbd5e1;font-size:.75rem}
+  .charts{display:grid;grid-template-columns:1fr;gap:1rem}
+  @media(min-width:700px){.charts{grid-template-columns:1fr 1fr}}
+  svg{width:100%;height:220px;background:#0b1220;border:1px solid #1f2937;border-radius:12px}
+  .foot{opacity:.8;font-size:.85rem;margin-top:.6rem}
+</style>
+</head>
+<body>
+<header><h1>☕ Coffee Shop Mini Simulation</h1></header>
+<div class="wrap grid">
+  <section class="card">
+    <h2>Decisions</h2>
+    <div class="body">
+      <label><span>Customer Base (B)</span><input id="B" type="number" value="1000" min="100" step="50"></label>
+      <label><span>Price per drink (p)</span><input id="p" type="number" value="3.5" min="1" step="0.1"></label>
+      <label><span>Hours open per day (h)</span><input id="h" type="number" value="10" min="4" max="16" step="1"></label>
+      <label><span># Staff (s)</span><input id="s" type="number" value="4" min="1" step="1"></label>
+      <label><span>Wage per hour (w)</span><input id="w" type="number" value="12" min="8" step="0.5"></label>
+      <label><span>Marketing budget / round (m)</span><input id="m" type="number" value="400" min="0" step="50"></label>
+      <label><span>Quality level (q)</span><input id="q" type="range" value="3" min="1" max="5"></label>
+      <label><span>Competitor price (cp)</span><input id="cp" type="number" value="3.8" min="1" step="0.1"></label>
+      <label><span>Fixed costs / round</span><input id="fixed" type="number" value="2000" min="0" step="100"></label>
+      <label><span>Variable cost / drink</span><input id="varc" type="number" value="0.8" min="0.1" step="0.05"></label>
+      <label><span>Days per round</span><input id="days" type="number" value="30" min="5" step="1"></label>
+      <label><span>Target drinks / emp / hr</span><input id="target" type="number" value="8" min="2" step="1"></label>
+      <label><span>Difficulty</span>
+        <select id="level">
+          <option value="medium" selected>Medium (default)</option>
+          <option value="easy">Easy</option>
+          <option value="hard">Hard</option>
+        </select>
+      </label>
+      <label><span>Random events</span>
+        <select id="events">
+          <option value="none" selected>None</option>
+          <option value="random">Random each round</option>
+          <option value="rain">Rainy day (−20% demand)</option>
+          <option value="festival">Local festival (+25% demand)</option>
+          <option value="supplier">Supplier delay (+10% costs)</option>
+          <option value="viral">Viral review (+15% demand)</option>
+          <option value="outage">Power outage (−30% demand, +5% costs)</option>
+        </select>
+      </label>
+      <label><span>Enable Store 2</span><input id="store2" type="checkbox"></label>
+      <label><span>Store 2 size (vs. base)</span><input id="s2scale" type="number" value="0.6" min="0.2" max="2" step="0.1"></label>
+      <label><span>Store 2 fixed cost</span><input id="fixed2" type="number" value="1500" min="0" step="100"></label>
+      <div class="row" style="margin-top:.6rem">
+        <button id="run">Run Round</button>
+        <button class="alt" id="reset">Reset</button>
+        <span class="badge" id="lvlbadge">Medium: baseline demand & costs</span>
+        <span class="badge" id="evbadge">Event: none</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Results (this round)</h2>
+    <div class="body">
+      <div class="kpis">
+        <div class="kpi"><h3>Revenue</h3><div class="v" id="rev">$0</div></div>
+        <div class="kpi"><h3>Profit</h3><div class="v" id="prof">$0</div></div>
+        <div class="kpi"><h3>Drinks sold</h3><div class="v" id="drinks">0</div></div>
+        <div class="kpi"><h3>Customers / day</h3><div class="v" id="cust">0</div></div>
+        <div class="kpi"><h3>Service speed</h3><div class="v" id="speed">0</div></div>
+        <div class="kpi"><h3>Employee satisfaction</h3><div class="v" id="satis">0</div></div>
+      </div>
+      <div class="foot">Service speed: 100 = very fast; 0 = very slow. Satisfaction: 0–100.</div>
+    </div>
+  </section>
+
+  <section class="card" style="grid-column:1/-1">
+    <h2>History</h2>
+    <div class="body">
+      <div class="charts">
+        <svg id="chartProfit"></svg>
+        <svg id="chartSatis"></svg>
+      </div>
+      <div style="margin-top:1rem;overflow:auto">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>Round</th><th>Price</th><th>Hours</th><th>Staff</th><th>Quality</th><th>Marketing</th>
+              <th>Revenue</th><th>Profit</th><th>Drinks</th><th>Cust/day</th><th>Speed</th><th>Satisfaction</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+// JavaScript simulation logic
+const $ = id => document.getElementById(id);
+let round = 0;
+const hist = [];
+
+function fmtMoney(x){return `$${x.toFixed(0)}`;}
+function fmt(x){return x.toFixed(0);}
+
+function runRound(){
+  round++;
+  const B = +$('B').value;
+  const p = +$('p').value;
+  const h = +$('h').value;
+  const s = +$('s').value;
+  const w = +$('w').value;
+  const m = +$('m').value;
+  const q = +$('q').value;
+  const cp = +$('cp').value;
+  const fixed = +$('fixed').value;
+  const varc = +$('varc').value;
+  const days = +$('days').value;
+  const target = +$('target').value;
+  const level = $('level').value;
+  const events = $('events')?.value || 'none';
+  const store2on = $('store2')?.checked || false;
+  const s2scale = +($('s2scale')?.value || 0.6);
+  const fixed2 = +($('fixed2')?.value || 1500);
+
+  // Difficulty modifiers
+  let demMult = 1, costMult = 1, lvlText = 'Medium: baseline demand & costs';
+  if(level==='easy'){ demMult = 1.2; costMult = 0.9; lvlText = 'Easy: +20% demand, -10% costs'; }
+  if(level==='hard'){ demMult = 0.85; costMult = 1.1; lvlText = 'Hard: -15% demand, +10% costs'; }
+  $('lvlbadge').textContent = lvlText;
+
+  // Event modifiers
+  let demEvent = 1, costEvent = 1; 
+  let evSel = events, evText = 'Event: none';
+  const roll = () => ['rain','festival','supplier','viral','outage'][Math.floor(Math.random()*5)];
+  if (evSel === 'random') evSel = roll();
+  if (evSel === 'rain')      { demEvent = 0.80; evText = 'Event: Rainy (−20% demand)'; }
+  if (evSel === 'festival')  { demEvent = 1.25; evText = 'Event: Festival (+25% demand)'; }
+  if (evSel === 'supplier')  { costEvent = 1.10; evText = 'Event: Supplier (+10% costs)'; }
+  if (evSel === 'viral')     { demEvent = 1.15; evText = 'Event: Viral (+15% demand)'; }
+  if (evSel === 'outage')    { demEvent = 0.70; costEvent = 1.05; evText = 'Event: Outage (−30% demand, +5% costs)'; }
+  $('evbadge').textContent = evText;
+
+  // Store 1 calculations
+  let demandFactor = B * (1 + 0.1*(q-3)) * (1 + 0.2*(m/1000)) * (cp/p);
+  demandFactor *= (demMult * demEvent);
+  const cust1 = Math.max(0, Math.round(demandFactor * (h/12)));
+  const drinks1 = cust1 * days;
+  const revenue1 = drinks1 * p;
+  const labor1 = (s * w * (h * days)) * costMult * costEvent;
+  const other1 = (fixed * costMult * costEvent) + ((varc * costMult * costEvent) * drinks1) + m;
+
+  // Optional Store 2
+  let totalRevenue = revenue1;
+  let totalLabor = labor1;
+  let totalOther = other1;
+  let totalDrinks = drinks1;
+  let totalCust = cust1;
+  let sAll = s; let hoursAll = (h*days);
+
+  if (store2on){
+    const sc = Math.max(0.2, s2scale || 0.6);
+    const B2 = B * sc;
+    const s2 = Math.max(1, Math.round(s * sc));
+    let demand2 = B2 * (1 + 0.1*(q-3)) * (1 + 0.2*(m/1000)) * (cp/p);
+    demand2 *= (demMult * demEvent);
+    const cust2 = Math.max(0, Math.round(demand2 * (h/12)));
+    const drinks2 = cust2 * days;
+    const revenue2 = drinks2 * p;
+    const labor2 = (s2 * w * (h * days)) * costMult * costEvent;
+    const other2 = (fixed2 * costMult * costEvent) + ((varc * costMult * costEvent) * drinks2);
+
+    totalRevenue += revenue2;
+    totalLabor   += labor2;
+    totalOther   += other2;
+    totalDrinks  += drinks2;
+    totalCust    += cust2;
+    sAll         += s2;
+    hoursAll     += (h*days);
+  }
+
+  const totalProfit = totalRevenue - (totalLabor + totalOther);
+
+  const drinksPerEmpHr = (sAll * hoursAll) === 0 ? 0 : totalDrinks / (sAll * hoursAll);
+  const serviceSpeed   = Math.max(0, 100 - (drinksPerEmpHr / target) * 100);
+  const hoursAbove = Math.max(0, h - 8);
+  const satisfaction = Math.max(0, Math.min(100, 50 + 10*(q-3) - 5*hoursAbove + 0.01*(w*100)));
+
+  // Update KPIs
+  $('rev').textContent = fmtMoney(totalRevenue);
+  $('prof').textContent = fmtMoney(totalProfit);
+  $('drinks').textContent = fmt(totalDrinks);
+  $('cust').textContent = fmt(totalCust);
+  $('speed').textContent = fmt(serviceSpeed);
+  $('satis').textContent = fmt(satisfaction);
+
+  const row = {round,p,h,s,q,m,revenue:totalRevenue,profit:totalProfit,drinksSold:totalDrinks,customersPerDay:totalCust,serviceSpeed,satisfaction};
+  hist.push(row);
+  addRow(row);
+  drawCharts();
+}
+
+function addRow(r){
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${r.round}</td>
+    <td>${r.p.toFixed(2)}</td>
+    <td>${r.h}</td>
+    <td>${r.s}</td>
+    <td>${r.q}</td>
+    <td>${r.m}</td>
+    <td>${fmtMoney(r.revenue)}</td>
+    <td>${fmtMoney(r.profit)}</td>
+    <td>${fmt(r.drinksSold)}</td>
+    <td>${fmt(r.customersPerDay)}</td>
+    <td>${fmt(r.serviceSpeed)}</td>
+    <td>${fmt(r.satisfaction)}</td>
+  `;
+  $('tbl').querySelector('tbody').appendChild(tr);
+}
+
+function drawCharts(){
+  drawLine(document.getElementById('chartProfit'), hist.map(h=>h.profit), 'Profit');
+  drawLine(document.getElementById('chartSatis'), hist.map(h=>h.satisfaction), 'Employee Satisfaction');
+}
+
+function drawLine(svg, data, title){
+  const w = svg.clientWidth || svg.parentElement.clientWidth || 520;
+  const h = svg.clientHeight || 220;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.innerHTML = '';
+  const pad = 32;
+
+  // Axes
+  const ax = document.createElementNS('http://www.w3.org/2000/svg','path');
+  ax.setAttribute('d', `M ${pad} ${h-pad} H ${w-pad} M ${pad} ${pad} V ${h-pad}`);
+  ax.setAttribute('stroke','#374151'); 
+  ax.setAttribute('fill','none');
+  svg.appendChild(ax);
+
+  // Title
+  const tt = document.createElementNS('http://www.w3.org/2000/svg','text');
+  tt.setAttribute('x', pad); 
+  tt.setAttribute('y', 22); 
+  tt.setAttribute('fill','#cbd5e1'); 
+  tt.setAttribute('font-size','14'); 
+  tt.textContent = title;
+  svg.appendChild(tt);
+
+  if(data.length===0) return;
+
+  const max = Math.max(...data, 0);
+  const min = Math.min(...data, 0);
+  const span = (max - min) || 1;
+  const dx = (w - pad*2) / Math.max(1,(data.length-1));
+
+  // Line
+  let d = '';
+  data.forEach((v,i)=>{
+    const x = pad + i*dx;
+    const y = pad + (h - pad*2) * (1 - (v - min)/span);
+    d += (i ? 'L' : 'M') + x + ' ' + y + ' ';
+  });
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d', d.trim());
+  path.setAttribute('stroke', '#22c55e');
+  path.setAttribute('fill','none');
+  path.setAttribute('stroke-width','2');
+  svg.appendChild(path);
+}
+
+function resetAll(){
+  round = 0; hist.length = 0;
+  document.querySelector('#tbl tbody').innerHTML = '';
+  ['rev','prof','drinks','cust','speed','satis'].forEach(id=>$(id).textContent='0');
+  $('evbadge').textContent = 'Event: none';
+  drawCharts();
+}
+
+document.getElementById('run').addEventListener('click', runRound);
+document.getElementById('reset').addEventListener('click', resetAll);
+document.getElementById('level').addEventListener('change', ()=>{
+  const v = document.getElementById('level').value; 
+  const t = v==='easy' ? 'Easy: +20% demand, -10% costs' 
+        : v==='hard' ? 'Hard: -15% demand, +10% costs' 
+        : 'Medium: baseline demand & costs';
+  document.getElementById('lvlbadge').textContent = t; 
+});
+</script>
+</body>
+</html>
