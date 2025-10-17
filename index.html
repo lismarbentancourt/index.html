@@ -243,25 +243,6 @@ function runRound(){
   }
 
   const totalProfit = totalRevenue - (totalLabor + totalOther);
-// --- NUEVO: cálculo de velocidad (Speed) ---
-function computeSpeed(customersPerDay, staff, hours) {
-  const servicePerStaffPerHour = 18;
-  const capacityPerHour = Math.max(1, staff * servicePerStaffPerHour);
-  const demandPerHour = customersPerDay / Math.max(1, hours);
-  const utilization = demandPerHour / capacityPerHour;
-  let score;
-  if (utilization <= 0.85) {
-    score = 100;
-  } else if (utilization <= 1.0) {
-    const pct = (utilization - 0.85) / 0.15;
-    score = Math.round(100 - pct * 30);
-  } else {
-    const overload = utilization - 1.0;
-    score = Math.max(10, Math.round(70 - overload * 80));
-  }
-  return score;
-}
-const speed = computeSpeed(customersPerDay, sAll, hoursAll);
 
   const drinksPerEmpHr = (sAll * hoursAll) === 0 ? 0 : totalDrinks / (sAll * hoursAll);
   const serviceSpeed   = Math.max(0, 100 - (drinksPerEmpHr / target) * 100);
@@ -295,7 +276,7 @@ function addRow(r){
     <td>${fmtMoney(r.profit)}</td>
     <td>${fmt(r.drinksSold)}</td>
     <td>${fmt(r.customersPerDay)}</td>
-   <td>${fmt(r.speed)}</td>
+    <td>${fmt(r.serviceSpeed)}</td>
     <td>${fmt(r.satisfaction)}</td>
   `;
   $('tbl').querySelector('tbody').appendChild(tr);
@@ -396,6 +377,7 @@ h3, h4, h5, td, th {
 
 </body>
 </html>
+
 
 
 
